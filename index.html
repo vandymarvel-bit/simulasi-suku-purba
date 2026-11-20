@@ -1,0 +1,1227 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Suku Purba: Dunia Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #120f0d;
+            color: #f5f5f4;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-ancient {
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.03em;
+        }
+        .btn-stone {
+            transition: transform 0.1s ease, filter 0.15s ease;
+            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.75);
+        }
+        .btn-stone:active:not(:disabled) {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.75);
+        }
+        .btn-stone:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        @keyframes readyPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.6), 0 3px 0 rgba(0, 0, 0, 0.75); }
+            50% { box-shadow: 0 0 16px 3px rgba(251, 191, 36, 0.35), 0 3px 0 rgba(0, 0, 0, 0.75); }
+        }
+        .btn-action-ready {
+            animation: readyPulse 1.6s infinite;
+        }
+        #worldCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        body.pan-mode #worldCanvas { cursor: grab !important; }
+        body.pan-mode.is-panning #worldCanvas { cursor: grabbing !important; }
+        #portraitRotateGuard { display: none; }
+        @media (orientation: portrait) and (max-width: 900px) {
+            #portraitRotateGuard { display: flex; }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between bg-[#120f0d] relative">
+
+    <!-- Panduan Rotasi ke Landscape untuk HP -->
+    <div id="portraitRotateGuard" class="fixed inset-0 z-[100] bg-[#14100d]/98 backdrop-blur-md flex-col items-center justify-center p-6 text-center">
+        <div class="text-5xl mb-3 animate-bounce">📱↻</div>
+        <h2 class="font-ancient font-bold text-xl text-amber-400 mb-2">Putar HP ke Mode Landscape</h2>
+        <p class="text-xs text-stone-300 max-w-sm leading-relaxed">
+            <strong>Suku Purba: Dunia Online</strong> dirancang khusus untuk tampilan mendatar (landscape) agar peta luas, tombol aksi, dan kontrol gerak nyaman disentuh.
+        </p>
+    </div>
+
+    <!-- GERBANG WAJIB BUAT AKUN / MASUK -->
+    <div id="authGateScreen" class="fixed inset-0 z-50 bg-gradient-to-br from-[#1b140f] via-[#120e0b] to-[#231710] flex items-center justify-center p-3 overflow-y-auto">
+        <div class="bg-[#1e1814]/95 border-2 border-amber-500/60 rounded-3xl max-w-2xl w-full p-4 sm:p-5 shadow-2xl my-auto">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-700/80">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-800 flex items-center justify-center text-xl border border-amber-300/40">🔥</div>
+                    <div>
+                        <h1 class="font-ancient font-extrabold text-base sm:text-lg text-amber-400">SUKU PURBA: DUNIA ONLINE</h1>
+                        <p class="text-[11px] text-stone-400">Buat akun atau masuk untuk memasuki desa &amp; rumah pribadimu</p>
+                    </div>
+                </div>
+                <div class="flex bg-stone-950 p-1 rounded-xl border border-stone-700 text-xs font-bold">
+                    <button type="button" id="tabAuthRegister" onclick="switchAuthTab('register')" class="px-3 py-1 rounded-lg bg-amber-500 text-stone-950">Buat Akun</button>
+                    <button type="button" id="tabAuthLogin" onclick="switchAuthTab('login')" class="px-3 py-1 rounded-lg text-stone-300">Masuk</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-xs">
+                <div class="space-y-2.5">
+                    <div>
+                        <label class="block font-bold text-stone-300 mb-1">Nama Akun / Karakter</label>
+                        <input type="text" id="authUsername" maxlength="20" placeholder="Contoh: ArkaSuku" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-300 mb-1">Kata Sandi / PIN</label>
+                        <input type="password" id="authPassword" maxlength="24" placeholder="Minimal 3 karakter" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div id="registerEmailWrap">
+                        <label class="block font-bold text-stone-300 mb-1">Email (Opsional)</label>
+                        <input type="email" id="authEmail" placeholder="nama@email.com" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                </div>
+
+                <div class="bg-stone-950/90 border border-stone-800 rounded-2xl p-3 flex flex-col justify-between space-y-2">
+                    <div>
+                        <div class="font-bold text-amber-300 mb-1.5">Peran Masuk Desa</div>
+                        <label class="flex items-start gap-2 p-2 rounded-xl bg-stone-900 border border-stone-700/80 cursor-pointer mb-1.5">
+                            <input type="radio" name="authRole" id="roleMemberRadio" value="member" checked onchange="toggleOwnerPinInput()" class="mt-0.5 accent-emerald-500">
+                            <div>
+                                <div class="font-bold text-emerald-300">🧭 Warga / Pengembara Online</div>
+                                <div class="text-[10px] text-stone-400">Punya rumah pribadi, tidur di dalam rumah, edit karakter sendiri, &amp; bertahan hidup.</div>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-2 p-2 rounded-xl bg-stone-900 border border-amber-600/40 cursor-pointer">
+                            <input type="radio" name="authRole" id="roleOwnerRadio" value="owner" onchange="toggleOwnerPinInput()" class="mt-0.5 accent-amber-500">
+                            <div class="w-full">
+                                <div class="font-bold text-amber-300">👑 Pemilik Desa (Edit Peta &amp; Stok ∞)</div>
+                                <div class="text-[10px] text-stone-400">Edit desa, stok tak terbatas (∞), &amp; beri barang ke pemain.</div>
+                                <input type="password" id="authOwnerPin" placeholder="PIN Pemilik Desa (SUKU2026)" class="hidden mt-1.5 w-full bg-stone-950 border border-amber-500/60 rounded-lg px-2.5 py-1 text-xs text-amber-200">
+                            </div>
+                        </label>
+                    </div>
+                    <div id="savedAccountsQuickBox" class="pt-1"></div>
+                </div>
+            </div>
+
+            <div id="authErrorBox" class="hidden mt-2.5 text-xs font-bold text-rose-300 bg-rose-950/80 border border-rose-700/60 rounded-xl px-3 py-2"></div>
+
+            <button type="button" onclick="handleAuthSubmit()" class="mt-3 w-full btn-stone bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-stone-950 font-ancient font-extrabold text-sm py-2.5 rounded-2xl">
+                🔥 MASUK KE DUNIA SUKU PURBA
+            </button>
+        </div>
+    </div>
+
+    <!-- TOP HUD BAR -->
+    <header class="relative z-20 bg-[#1b1613]/95 border-b border-[#443830] px-2.5 py-1.5 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="text-lg">🔥</span>
+            <div class="truncate">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <span id="hudWorldTitle" class="font-ancient font-bold text-xs sm:text-sm text-amber-400 truncate">Lembah Api Abadi</span>
+                    <span id="hudRoleBadge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🧭 Warga</span>
+                    <span id="hudSleepBadge" class="hidden text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-500/25 text-indigo-200 border border-indigo-400/50">🏠 Di Dalam Rumah (Tidur)</span>
+                    <span id="hudDiagBadge" class="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-stone-900 text-amber-200/90 border border-stone-700/80">(32.5, 25.5) • Diam</span>
+                </div>
+                <div class="text-[10px] text-stone-400 truncate">
+                    Pemain: <strong id="hudPlayerName" class="text-white">-</strong> • <span id="hudDayTime">☀️ Hari 1 • 08:30</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bar Darah (HP), Kenyang & Vitalitas -->
+        <div class="flex items-center gap-2 bg-stone-950/90 border border-stone-800 rounded-xl px-2.5 py-1 text-[10px] font-bold">
+            <div class="w-16 sm:w-20">
+                <div class="flex justify-between text-rose-300"><span>❤️ HP</span><span id="hudHpText">100</span></div>
+                <div class="w-full h-1.5 bg-stone-800 rounded-full overflow-hidden mt-0.5">
+                    <div id="hudHpBar" class="h-full bg-rose-500 transition-all" style="width:100%"></div>
+                </div>
+            </div>
+            <div class="w-16 sm:w-20">
+                <div class="flex justify-between text-amber-300"><span>🍖 Kenyang</span><span id="hudHungerText">100%</span></div>
+                <div class="w-full h-1.5 bg-stone-800 rounded-full overflow-hidden mt-0.5">
+                    <div id="hudHungerBar" class="h-full bg-amber-500 transition-all" style="width:100%"></div>
+                </div>
+            </div>
+            <div class="w-16 sm:w-20 hidden md:block">
+                <div class="flex justify-between text-emerald-300"><span>⚡ Vital</span><span id="hudVitText">100%</span></div>
+                <div class="w-full h-1.5 bg-stone-800 rounded-full overflow-hidden mt-0.5">
+                    <div id="hudVitBar" class="h-full bg-emerald-500 transition-all" style="width:100%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventaris Pribadi & Tombol Menu -->
+        <div class="flex items-center gap-1 flex-wrap justify-end">
+            <div class="hidden sm:flex items-center gap-1.5 bg-stone-900 border border-stone-700 rounded-xl px-2 py-1 text-[10px] font-bold">
+                <span class="text-rose-200">🍖 <strong id="invFood">2</strong></span>
+                <span class="text-amber-200">🪵 <strong id="invWood">0</strong></span>
+                <span class="text-stone-300">🪨 <strong id="invStone">0</strong></span>
+                <span class="text-emerald-300">🌐 <strong id="hudOnlineCount">1</strong></span>
+            </div>
+
+            <button type="button" id="btnQuickSleep" onclick="toggleSleepInsideMyHouse()" class="btn-stone bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-400/50 text-indigo-200 text-[10px] font-bold px-2 py-1 rounded-xl" title="Masuk &amp; Tidur di Rumah">💤 Tidur</button>
+            <button type="button" id="btnBuildHouseMode" onclick="toggleBuildHouseMode()" class="btn-stone bg-amber-950/90 hover:bg-amber-900 border border-amber-400/60 text-amber-200 text-[10px] font-bold px-2 py-1 rounded-xl" title="Bangun Rumah Pribadimu di Peta">🏠 Bangun Rumah</button>
+            <button type="button" onclick="openCharacterCreatorModal()" class="btn-stone bg-amber-900/80 hover:bg-amber-800 border border-amber-500/50 text-amber-200 text-xs px-2 py-1 rounded-xl" title="Edit Karakter Saya">🎨</button>
+            <button type="button" onclick="openToolUpgradeModal()" class="btn-stone bg-stone-800 hover:bg-stone-700 border border-stone-600 text-amber-300 text-[10px] font-bold px-2 py-1 rounded-xl" title="Upgrade Peralatan">⚒️ Alat</button>
+            <button type="button" onclick="openGiftModal()" class="btn-stone bg-stone-800 hover:bg-stone-700 border border-emerald-500/50 text-emerald-300 text-[10px] font-bold px-2 py-1 rounded-xl" title="Beri Barang ke Pemain Lain">🎁 Kirim</button>
+            <button type="button" onclick="toggleRosterDrawer()" class="btn-stone bg-stone-800 hover:bg-stone-700 border border-stone-600 text-sky-300 text-xs px-2 py-1 rounded-xl" title="Daftar Pemain &amp; Rumah">🧑‍🤝‍🧑</button>
+            <button type="button" id="btnFollowCam" onclick="toggleFollowCamera()" class="btn-stone bg-emerald-900/80 border border-emerald-500/50 text-emerald-200 text-[10px] font-bold px-2 py-1 rounded-xl">📷 Ikut: ON</button>
+            <button type="button" onclick="adjustCameraZoom(-0.2)" class="btn-stone bg-stone-800 hover:bg-stone-700 border border-stone-600 text-amber-200 text-[10px] font-bold px-1.5 py-1 rounded-xl" title="Perkecil Kamera">🔍-</button>
+            <span id="hudZoomLabel" class="text-[10px] font-bold text-amber-300 px-1">0.9x</span>
+            <button type="button" onclick="adjustCameraZoom(0.2)" class="btn-stone bg-stone-800 hover:bg-stone-700 border border-stone-600 text-amber-200 text-[10px] font-bold px-1.5 py-1 rounded-xl" title="Perbesar Kamera">🔍+</button>
+            <button type="button" id="btnPanToggle" onclick="togglePanTool()" class="btn-stone bg-stone-800 border border-stone-600 text-stone-200 text-xs px-2 py-1 rounded-xl" title="Geser Peta">✋</button>
+            <button type="button" onclick="toggleAudio()" id="btnAudio" class="btn-stone bg-stone-800 border border-stone-600 text-xs px-2 py-1 rounded-xl">🔊</button>
+            <button type="button" onclick="logoutToAuthScreen()" class="btn-stone bg-stone-800 hover:bg-rose-950 border border-stone-600 text-[10px] font-bold text-stone-300 px-2 py-1 rounded-xl" title="Offline &amp; Tidur di Dalam Rumah">💤 Keluar</button>
+        </div>
+    </header>
+
+    <!-- AREA UTAMA KANVAS -->
+    <main class="relative flex-grow w-full h-full overflow-hidden">
+        <canvas id="worldCanvas"></canvas>
+
+        <!-- Chip Status Target Kontekstual -->
+        <div class="absolute top-2 left-2 z-10 bg-[#1c1714]/90 border border-stone-700/80 rounded-2xl px-2.5 py-1 text-[10px] font-bold text-stone-300 pointer-events-none">
+            <span id="contextTargetChip">📍 Dekati pohon, batu, beri, hewan liar, rumahmu, atau pemain lain</span>
+        </div>
+
+        <!-- Feed Interaksi Singkat -->
+        <div id="socialFeedBox" class="absolute top-9 left-2 z-10 bg-[#16120f]/80 border border-stone-800/80 rounded-2xl px-2.5 py-1.5 w-60 max-h-20 overflow-y-auto pointer-events-none space-y-0.5 text-[10px] text-amber-100/90">
+            <div class="text-stone-400 italic">💬 Aktivitas &amp; interaksi dunia tampil di sini</div>
+        </div>
+
+        <!-- Banner Saat Karakter Sedang Berada di Dalam Rumah (Tidur) -->
+        <div id="insideHouseBanner" class="hidden absolute top-2 left-1/2 -translate-x-1/2 z-20 bg-indigo-950/95 border-2 border-indigo-400/70 rounded-2xl px-3.5 py-1.5 shadow-2xl flex items-center gap-2.5 text-xs">
+            <span>🏠💤</span>
+            <div>
+                <span class="font-bold text-indigo-200">Sedang Tidur di Dalam Rumah</span>
+                <span class="text-[10px] text-indigo-300/80 hidden sm:inline"> • Memulihkan HP, Kenyang &amp; Vitalitas</span>
+            </div>
+            <button type="button" onclick="wakeUpFromHouse()" class="btn-stone bg-amber-400 hover:bg-amber-300 text-stone-950 font-bold text-[10px] px-2.5 py-1 rounded-xl">☀️ Bangun</button>
+        </div>
+
+        <!-- Drawer Pemain & Rumah -->
+        <aside id="rosterDrawer" class="hidden absolute top-11 left-2 z-20 bg-[#1e1814]/95 border-2 border-amber-500/50 rounded-2xl w-64 max-h-[65vh] flex flex-col shadow-2xl p-3">
+            <div class="flex items-center justify-between pb-2 border-b border-stone-800">
+                <span class="font-ancient font-bold text-xs text-amber-300">🧑‍🤝‍🧑 Pemain &amp; Rumah</span>
+                <button type="button" onclick="toggleRosterDrawer()" class="text-stone-400 hover:text-white text-xs font-bold">✕</button>
+            </div>
+            <div id="rosterListContainer" class="mt-2 space-y-1.5 overflow-y-auto text-xs"></div>
+        </aside>
+
+        <!-- Minimap Pojok Kanan Atas -->
+        <div class="absolute top-2 right-2 z-10 bg-[#1b1613]/90 border border-[#443830] rounded-2xl p-1 shadow-xl">
+            <canvas id="minimapCanvas" width="132" height="99" class="rounded-xl cursor-pointer block"></canvas>
+        </div>
+
+        <!-- Tombol Aksi Utama (Satu Tombol Kontekstual + Tombol Makan Pribadi) -->
+        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+            <button type="button" id="btnContextualAction" onclick="triggerContextualAction()" disabled class="btn-stone bg-stone-800 border-2 border-stone-600 text-stone-400 font-ancient font-bold text-xs px-3.5 py-2 rounded-2xl flex items-center gap-1.5">
+                <span id="ctxActionIcon">🔒</span>
+                <span id="ctxActionLabel">Dekati Objek</span>
+            </button>
+
+            <button type="button" id="btnEatPersonalFood" onclick="eatPersonalFood()" disabled class="btn-stone bg-emerald-700 hover:bg-emerald-600 border-2 border-emerald-400/60 text-white font-bold text-xs px-3 py-2 rounded-2xl flex items-center gap-1">
+                <span>🍖</span>
+                <span id="btnEatLabel">Makan (0)</span>
+            </button>
+        </div>
+
+        <!-- D-Pad Sentuh Kiri Bawah untuk HP Landscape -->
+        <div id="dpadBox" class="absolute bottom-3 left-3 z-20 grid grid-cols-3 gap-1 w-24 h-24">
+            <div></div>
+            <button type="button" data-dpad-dx="0" data-dpad-dy="-1" class="dpad-btn btn-stone bg-stone-800/90 border border-stone-600 rounded-xl text-xs font-bold">▲</button>
+            <div></div>
+            <button type="button" data-dpad-dx="-1" data-dpad-dy="0" class="dpad-btn btn-stone bg-stone-800/90 border border-stone-600 rounded-xl text-xs font-bold">◀</button>
+            <div class="bg-stone-900/70 rounded-xl flex items-center justify-center text-[10px] text-stone-500">🧭</div>
+            <button type="button" data-dpad-dx="1" data-dpad-dy="0" class="dpad-btn btn-stone bg-stone-800/90 border border-stone-600 rounded-xl text-xs font-bold">▶</button>
+            <div></div>
+            <button type="button" data-dpad-dx="0" data-dpad-dy="1" class="dpad-btn btn-stone bg-stone-800/90 border border-stone-600 rounded-xl text-xs font-bold">▼</button>
+            <div></div>
+        </div>
+
+        <!-- Tombol Emote Cepat Kanan Bawah -->
+        <div class="absolute bottom-3 right-3 z-20 flex items-center gap-1 bg-[#1c1714]/90 border border-stone-700 rounded-2xl p-1.5">
+            <button type="button" onclick="sendPlayerEmote('👋 Salam!')" class="btn-stone bg-stone-800 px-2 py-1 rounded-xl text-xs">👋</button>
+            <button type="button" onclick="sendPlayerEmote('🔥 Semangat!')" class="btn-stone bg-stone-800 px-2 py-1 rounded-xl text-xs">🔥</button>
+            <button type="button" onclick="sendPlayerEmote('🍖 Lapar!')" class="btn-stone bg-stone-800 px-2 py-1 rounded-xl text-xs">🍖</button>
+        </div>
+
+        <!-- Overlay Saat Karakter Gugur (HP 0) -->
+        <div id="deathOverlay" class="hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-stone-900 border-2 border-rose-500/70 rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl">
+                <div class="text-4xl mb-2">🪦</div>
+                <h3 class="font-ancient font-bold text-lg text-rose-400">Karaktermu Gugur!</h3>
+                <p id="deathCauseText" class="text-xs text-rose-200 font-semibold mt-1">Penyebab: Kelaparan parah karena tidak makan.</p>
+                <p class="text-xs text-stone-300 mt-1 mb-4">Jika tidak makan, rasa lapar akan menguras darah hingga habis. Bangkit kembali di rumahmu lalu segera tekan tombol Makan!</p>
+                <button type="button" onclick="reviveMyCharacter()" class="w-full btn-stone bg-amber-500 hover:bg-amber-400 text-stone-950 font-ancient font-bold text-xs py-2.5 rounded-xl">
+                    🔥 Bangkit Kembali
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toolbar Pemilik Desa (Hanya Muncul untuk Pemilik Desa) -->
+    <footer id="ownerToolbar" class="hidden relative z-20 bg-[#1b1613]/95 border-t border-amber-500/40 px-2.5 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-xs">
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+            <span class="text-[10px] font-bold text-amber-300 px-1.5">👑 Edit Desa:</span>
+            <button type="button" onclick="selectOwnerTool('none')" id="otool-none" class="btn-stone bg-amber-500 text-stone-950 font-bold text-[11px] px-2.5 py-1 rounded-xl">👆 Jelajah</button>
+            <button type="button" onclick="selectOwnerTool('tree')" id="otool-tree" class="btn-stone bg-stone-800 border border-stone-600 text-[11px] px-2.5 py-1 rounded-xl">🌲 +Pohon</button>
+            <button type="button" onclick="selectOwnerTool('rock')" id="otool-rock" class="btn-stone bg-stone-800 border border-stone-600 text-[11px] px-2.5 py-1 rounded-xl">⛰️ +Batu</button>
+            <button type="button" onclick="selectOwnerTool('berry')" id="otool-berry" class="btn-stone bg-stone-800 border border-stone-600 text-[11px] px-2.5 py-1 rounded-xl">🫐 +Beri</button>
+            <button type="button" onclick="selectOwnerTool('campfire')" id="otool-campfire" class="btn-stone bg-stone-800 border border-stone-600 text-[11px] px-2.5 py-1 rounded-xl">🔥 +Api</button>
+            <button type="button" onclick="selectOwnerTool('terrain_S')" id="otool-terrain_S" class="btn-stone bg-stone-800 border border-stone-600 text-[11px] px-2.5 py-1 rounded-xl">🪨 +Jalan</button>
+            <button type="button" onclick="selectOwnerTool('erase')" id="otool-erase" class="btn-stone bg-rose-950 border border-rose-700/60 text-rose-200 text-[11px] px-2.5 py-1 rounded-xl">💥 Hapus</button>
+        </div>
+        <button type="button" onclick="openWorldSettingsModal()" class="btn-stone bg-stone-800 border border-amber-500/40 text-amber-300 font-bold text-[11px] px-2.5 py-1 rounded-xl flex-shrink-0">📝 Nama Desa</button>
+    </footer>
+
+    <!-- MODAL EDIT KARAKTER SENDIRI -->
+    <div id="charCreatorModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto">
+        <div class="bg-[#1e1814] border-2 border-amber-500/60 rounded-3xl max-w-xl w-full p-4 sm:p-5 shadow-2xl my-auto">
+            <div class="flex items-center justify-between pb-2 border-b border-stone-800">
+                <h3 class="font-ancient font-bold text-base text-amber-400">🎨 Kustomisasi Karakter Saya</h3>
+                <button type="button" onclick="closeModal('charCreatorModal')" class="text-stone-400 hover:text-white font-bold">✕</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-xs">
+                <div class="bg-stone-950 border border-stone-800 rounded-2xl p-3 flex flex-col items-center justify-center">
+                    <canvas id="charPreviewCanvas" width="140" height="140"></canvas>
+                    <div id="charPreviewName" class="font-bold text-amber-300 mt-1">-</div>
+                </div>
+                <div class="space-y-2.5">
+                    <div>
+                        <label class="block font-bold text-stone-300 mb-1">Nama Karakter</label>
+                        <input type="text" id="inputCharName" maxlength="20" oninput="renderCharPreview()" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-1.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-300 mb-1">Warna Kulit</label>
+                        <div class="flex gap-2" id="skinPalette">
+                            <button type="button" data-skin="#f1c29b" onclick="pickSkin('#f1c29b')" class="w-7 h-7 rounded-full border-2 border-white" style="background:#f1c29b"></button>
+                            <button type="button" data-skin="#d99b66" onclick="pickSkin('#d99b66')" class="w-7 h-7 rounded-full border border-stone-500" style="background:#d99b66"></button>
+                            <button type="button" data-skin="#a86b3e" onclick="pickSkin('#a86b3e')" class="w-7 h-7 rounded-full border border-stone-500" style="background:#a86b3e"></button>
+                            <button type="button" data-skin="#6f4225" onclick="pickSkin('#6f4225')" class="w-7 h-7 rounded-full border border-stone-500" style="background:#6f4225"></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-300 mb-1">Warna Pakaian Purba</label>
+                        <div class="flex gap-2" id="outfitPalette">
+                            <button type="button" data-outfit="#92400e" onclick="pickOutfit('#92400e')" class="w-7 h-7 rounded-full border-2 border-white" style="background:#92400e"></button>
+                            <button type="button" data-outfit="#15803d" onclick="pickOutfit('#15803d')" class="w-7 h-7 rounded-full border border-stone-500" style="background:#15803d"></button>
+                            <button type="button" data-outfit="#0369a1" onclick="pickOutfit('#0369a1')" class="w-7 h-7 rounded-full border border-stone-500" style="background:#0369a1"></button>
+                            <button type="button" data-outfit="#9f1239" onclick="pickOutfit('#9f1239')" class="w-7 h-7 rounded-full border border-stone-500" style="background:#9f1239"></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-300 mb-1">Mahkota / Alat</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="selectHeadgear" onchange="renderCharPreview()" class="bg-stone-950 border border-stone-700 rounded-xl px-2 py-1.5 text-white">
+                                <option value="feather">🪶 Bulu Burung</option>
+                                <option value="horns">🦌 Tanduk Rusa</option>
+                                <option value="band">🌿 Ikat Daun</option>
+                            </select>
+                            <select id="selectTool" onchange="renderCharPreview()" class="bg-stone-950 border border-stone-700 rounded-xl px-2 py-1.5 text-white">
+                                <option value="spear">🔱 Tombak</option>
+                                <option value="axe">🪓 Kapak</option>
+                                <option value="staff">🔮 Tongkat</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" onclick="closeModal('charCreatorModal')" class="btn-stone bg-stone-700 px-4 py-2 rounded-xl text-xs font-bold">Batal</button>
+                <button type="button" onclick="saveCharacterCustomization()" class="btn-stone bg-amber-500 hover:bg-amber-400 text-stone-950 px-4 py-2 rounded-xl text-xs font-bold">Simpan Karakter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RUMAH PRIBADI, TIDUR DI DALAM RUMAH & UPGRADE RUMAH -->
+    <div id="housePanelModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="bg-[#1e1814] border-2 border-amber-500/70 rounded-3xl max-w-md w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-2 border-b border-stone-800">
+                <div>
+                    <span id="houseLevelBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">Lv.1</span>
+                    <h3 id="houseModalTitle" class="font-ancient font-bold text-base text-white mt-0.5">Pondok Jerami Purba</h3>
+                </div>
+                <button type="button" onclick="closeModal('housePanelModal')" class="text-stone-400 hover:text-white font-bold">✕</button>
+            </div>
+            <div class="mt-3 space-y-3 text-xs">
+                <div class="bg-stone-950 border border-indigo-500/40 rounded-2xl p-3 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-bold text-indigo-200 mb-0.5">Masuk &amp; Tidur di Dalam Rumah</div>
+                        <p id="houseBonusDesc" class="text-stone-300 leading-relaxed text-[11px]">Tidur di dalam rumah memulihkan HP, Kenyang &amp; Vitalitas.</p>
+                    </div>
+                    <button type="button" id="btnEnterSleepHouse" onclick="enterAndSleepInHouseFromModal()" class="btn-stone bg-indigo-500 hover:bg-indigo-400 text-white font-bold px-3 py-2 rounded-xl flex-shrink-0">💤 Masuk Tidur</button>
+                </div>
+                <div class="bg-stone-950 border border-amber-500/40 rounded-2xl p-3">
+                    <div id="houseNextTierName" class="font-bold text-amber-300 mb-1">Lv.2 Rumah Kayu Purba</div>
+                    <p id="houseUpgradeCostText" class="text-[11px] text-stone-400 mb-2.5">-</p>
+                    <button type="button" id="btnUpgradeHouse" onclick="upgradeMyHouse()" class="w-full btn-stone bg-amber-500 hover:bg-amber-400 text-stone-950 font-ancient font-bold py-2 rounded-xl">⬆️ Upgrade Rumah</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL UPGRADE PERALATAN -->
+    <div id="toolUpgradeModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="bg-[#1e1814] border-2 border-amber-500/70 rounded-3xl max-w-md w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-2 border-b border-stone-800">
+                <h3 class="font-ancient font-bold text-base text-amber-400">⚒️ Upgrade Peralatan Purba</h3>
+                <button type="button" onclick="closeModal('toolUpgradeModal')" class="text-stone-400 hover:text-white font-bold">✕</button>
+            </div>
+            <div id="toolUpgradeList" class="mt-3 space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- MODAL KIRIM BARANG / PERALATAN -->
+    <div id="giftModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="bg-[#1e1814] border-2 border-emerald-500/70 rounded-3xl max-w-md w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-2 border-b border-stone-800">
+                <h3 class="font-ancient font-bold text-base text-emerald-400">🎁 Kirim Barang ke Pemain Lain</h3>
+                <button type="button" onclick="closeModal('giftModal')" class="text-stone-400 hover:text-white font-bold">✕</button>
+            </div>
+            <div class="mt-3 space-y-2.5 text-xs">
+                <div>
+                    <label class="block font-bold text-stone-300 mb-1">Pemain Tujuan</label>
+                    <select id="giftRecipientSelect" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-white"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-stone-300 mb-1">Jenis Barang</label>
+                        <select id="giftItemSelect" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-2.5 py-2 text-white">
+                            <option value="food">🍖 Makanan (+3)</option>
+                            <option value="wood">🪵 Kayu (+5)</option>
+                            <option value="stone">🪨 Batu (+5)</option>
+                            <option value="axe_lv2">🪓 Kapak Batu Lv.2</option>
+                            <option value="spear_lv2">🔱 Tombak Tajam Lv.2</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-300 mb-1">Jumlah Paket</label>
+                        <input type="number" id="giftQtyInput" min="1" max="50" value="1" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                </div>
+                <p id="giftSourceNote" class="text-[11px] text-amber-300"></p>
+                <button type="button" onclick="sendGiftToPlayer()" class="w-full btn-stone bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-ancient font-bold py-2.5 rounded-xl">🎁 Kirim Sekarang</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL INTERAKSI ANTAR PEMAIN -->
+    <div id="playerInteractModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="bg-[#1e1814] border-2 border-sky-500/70 rounded-3xl max-w-sm w-full p-4 shadow-2xl">
+            <div class="flex items-center justify-between pb-2 border-b border-stone-800">
+                <h3 id="interactPlayerTitle" class="font-ancient font-bold text-sm text-sky-300">💬 Interaksi Pemain</h3>
+                <button type="button" onclick="closeModal('playerInteractModal')" class="text-stone-400 hover:text-white font-bold">✕</button>
+            </div>
+            <div class="mt-3 space-y-2.5 text-xs">
+                <div class="flex gap-1.5 flex-wrap">
+                    <button type="button" onclick="quickGreetSelectedPlayer('👋 Salam suku!')" class="btn-stone bg-stone-800 border border-stone-600 px-2.5 py-1.5 rounded-xl">👋 Sapa</button>
+                    <button type="button" onclick="quickGreetSelectedPlayer('🏹 Ayo berburu!')" class="btn-stone bg-stone-800 border border-stone-600 px-2.5 py-1.5 rounded-xl">🏹 Ajak Berburu</button>
+                    <button type="button" onclick="openGiftModalForPeer()" class="btn-stone bg-emerald-900 border border-emerald-500/60 text-emerald-200 font-bold px-2.5 py-1.5 rounded-xl">🎁 Beri Barang</button>
+                </div>
+                <div class="flex gap-1.5">
+                    <input type="text" id="directChatInput" maxlength="80" placeholder="Kirim pesan singkat..." class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-1.5 text-white">
+                    <button type="button" onclick="sendDirectPlayerMessage()" class="btn-stone bg-sky-500 text-stone-950 font-bold px-3 py-1.5 rounded-xl">Kirim</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NAMA DESA & PIN PEMILIK -->
+    <div id="worldSettingsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="bg-[#1e1814] border-2 border-amber-500/70 rounded-3xl max-w-sm w-full p-5 shadow-2xl">
+            <h3 class="font-ancient font-bold text-base text-amber-400 mb-3">📝 Pengaturan Desa</h3>
+            <div class="space-y-2.5 text-xs">
+                <div>
+                    <label class="block font-bold text-stone-300 mb-1">Nama Desa</label>
+                    <input type="text" id="inputWorldTitle" maxlength="32" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block font-bold text-stone-300 mb-1">Nama Kepala Suku</label>
+                    <input type="text" id="inputCreatorName" maxlength="24" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block font-bold text-stone-300 mb-1">PIN Pemilik Desa Baru (Opsional)</label>
+                    <input type="text" id="inputNewOwnerPin" maxlength="20" placeholder="Biarkan kosong jika tidak diganti" class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-amber-200">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" onclick="closeModal('worldSettingsModal')" class="btn-stone bg-stone-700 px-3.5 py-1.5 rounded-xl text-xs font-bold">Batal</button>
+                <button type="button" onclick="saveWorldSettings()" class="btn-stone bg-amber-500 text-stone-950 px-3.5 py-1.5 rounded-xl text-xs font-bold">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toastBanner" class="hidden fixed top-12 left-1/2 -translate-x-1/2 z-[60] bg-stone-900/95 border border-amber-400/70 text-amber-200 text-xs font-bold px-4 py-1.5 rounded-full shadow-2xl pointer-events-none"></div>
+
+    <script>
+        const COLS = 64;
+        const ROWS = 48;
+        const TILE_SIZE = 48;
+        const DEFAULT_OWNER_PIN = "SUKU2026";
+        const ONLINE_CHANNEL_NAME = "suku_purba_dunia_online_v5";
+        const CONTEXT_PROXIMITY_TILES = 2.25;
+        const TREE_RESPAWN_MS = 120000;  // 2 menit
+        const ROCK_RESPAWN_MS = 120000;  // 2 menit
+        const BERRY_RESPAWN_MS = 90000;  // 90 detik
+
+        const HOUSE_TIERS = [
+            { level: 1, name: "Pondok Jerami Purba", icon: "🛖", hpHeal: 25, vitHeal: 35, costWood: 0, costStone: 0 },
+            { level: 2, name: "Rumah Kayu Purba", icon: "🏡", hpHeal: 40, vitHeal: 55, costWood: 8, costStone: 4 },
+            { level: 3, name: "Balai Batu Suku", icon: "🏛️", hpHeal: 60, vitHeal: 80, costWood: 16, costStone: 12 },
+            { level: 4, name: "Benteng Agung Purba", icon: "🏯", hpHeal: 90, vitHeal: 100, costWood: 28, costStone: 20 }
+        ];
+        const BUILD_HOUSE_COST = { wood: 6, stone: 3 };
+        const TOOL_UPGRADE_PATHS = {
+            axe: {
+                key: 'axe', label: 'Kapak Penebang',
+                tiers: [
+                    { lv: 1, name: 'Kapak Kayu', bonus: 0, wood: 0, stone: 0 },
+                    { lv: 2, name: 'Kapak Batu', bonus: 2, wood: 5, stone: 3 },
+                    { lv: 3, name: 'Kapak Perunggu', bonus: 4, wood: 10, stone: 8 },
+                    { lv: 4, name: 'Kapak Pusaka', bonus: 7, wood: 18, stone: 14 }
+                ]
+            },
+            pickaxe: {
+                key: 'pickaxe', label: 'Beliung Penambang',
+                tiers: [
+                    { lv: 1, name: 'Beliung Kasar', bonus: 0, wood: 0, stone: 0 },
+                    { lv: 2, name: 'Beliung Flint', bonus: 2, wood: 4, stone: 5 },
+                    { lv: 3, name: 'Beliung Perunggu', bonus: 4, wood: 9, stone: 12 },
+                    { lv: 4, name: 'Beliung Leluhur', bonus: 7, wood: 16, stone: 20 }
+                ]
+            },
+            spear: {
+                key: 'spear', label: 'Tombak Pemburu',
+                tiers: [
+                    { lv: 1, name: 'Tombak Runcing', bonus: 0, wood: 0, stone: 0 },
+                    { lv: 2, name: 'Tombak Batu', bonus: 2, wood: 5, stone: 4 },
+                    { lv: 3, name: 'Tombak Perunggu', bonus: 4, wood: 10, stone: 9 },
+                    { lv: 4, name: 'Tombak Raja Suku', bonus: 7, wood: 16, stone: 14 }
+                ]
+            }
+        };
+
+        const TERRAIN_INFO = {
+            G: { color: '#3f6212', alt: '#365314', walkable: true },
+            D: { color: '#78350f', alt: '#6c2e0d', walkable: true },
+            S: { color: '#57534e', alt: '#44403c', walkable: true },
+            F: { color: '#166534', alt: '#14532d', walkable: true },
+            R: { color: '#6b7280', alt: '#4b5563', walkable: true },
+            W: { color: '#0284c7', alt: '#0369a1', walkable: false }
+        };
+
+        const OBJECT_DEFS = {
+            campfire: { name: 'Api Unggun', icon: '🔥', solid: true },
+            hut:      { name: 'Rumah Suku', icon: '🛖', solid: true },
+            storage:  { name: 'Lumbung Desa', icon: '🧺', solid: true },
+            tree:     { name: 'Pohon Purba', icon: '🌲', solid: true },
+            rock:     { name: 'Batu Api', icon: '⛰️', solid: true },
+            berry:    { name: 'Semak Beri', icon: '🫐', solid: false }
+        };
+
+        const CREATURE_DEFS = [
+            { name: 'Rusa Purba', icon: '🦌', meat: 3 },
+            { name: 'Babi Hutan', icon: '🐗', meat: 4 },
+            { name: 'Mammoth', icon: '🦣', meat: 8 }
+        ];
+
+        function createDefaultWorld() {
+            const terrain = [];
+            for (let r = 0; r < ROWS; r++) {
+                const row = [];
+                for (let c = 0; c < COLS; c++) {
+                    const riverC = 46 + Math.round(Math.sin(r * 0.2) * 2.5);
+                    const lakeDist = Math.hypot(c - 13, r - 37);
+                    if (Math.abs(c - riverC) <= 1 || lakeDist < 4.2) row.push('W');
+                    else if (c >= 27 && c <= 37 && r >= 19 && r <= 29) row.push('D');
+                    else if ((c === 32 && r >= 8 && r <= 40) || (r === 24 && c >= 10 && c <= 54)) row.push('S');
+                    else if (c <= 20 && r <= 22) row.push('F');
+                    else if (c >= 18 && c <= 42 && r >= 3 && r <= 13) row.push('R');
+                    else row.push('G');
+                }
+                terrain.push(row);
+            }
+
+            const objects = [
+                { x: 32, y: 24, type: 'campfire' },
+                { x: 34, y: 24, type: 'storage' }
+            ];
+
+            for (let i = 0; i < 42; i++) {
+                const tx = (i < 26) ? (3 + (i * 5) % 17) : (50 + (i * 3) % 11);
+                const ty = 3 + ((i * 7) % (ROWS - 6));
+                if (TERRAIN_INFO[terrain[ty][tx]]?.walkable && !objects.some(o => o.x === tx && o.y === ty)) {
+                    objects.push({ x: tx, y: ty, type: 'tree' });
+                }
+            }
+            for (let i = 0; i < 24; i++) {
+                const rx = 19 + ((i * 4) % 23);
+                const ry = 4 + ((i * 3) % 9);
+                if (TERRAIN_INFO[terrain[ry][rx]]?.walkable && !objects.some(o => o.x === rx && o.y === ry)) {
+                    objects.push({ x: rx, y: ry, type: 'rock' });
+                }
+            }
+            for (let i = 0; i < 24; i++) {
+                const bx = 8 + ((i * 7) % 36);
+                const by = 14 + ((i * 5) % 28);
+                if (TERRAIN_INFO[terrain[by][bx]]?.walkable && !objects.some(o => o.x === bx && o.y === by)) {
+                    objects.push({ x: bx, y: by, type: 'berry' });
+                }
+            }
+
+            return {
+                title: "Lembah Api Abadi",
+                creator: "Uga-Buga",
+                weather: "clear",
+                day: 1,
+                timeOfDay: 8.5,
+                resources: { wood: 45, stone: 30, food: 35, hide: 12 },
+                terrain,
+                objects
+            };
+        }
+
+        let worldData = createDefaultWorld();
+        let wildCreatures = [];
+        let particles = [];
+        let popups = [];
+        let socialFeedLogs = [];
+
+        let currentAccount = null;
+        let isVillageOwner = false;
+        let authModeTab = 'register';
+        let ownerTool = 'none';
+        let buildHouseModeActive = false;
+        let hoveredGridTile = { x: -1, y: -1 };
+        let panToolActive = false;
+        let followCameraEnabled = true;
+        let activeContextTarget = null;
+        let selectedInteractPeer = null;
+
+        let myPeerId = 'peer_' + Math.random().toString(36).slice(2, 9);
+        let onlineChannel = null;
+        let onlinePeers = {};
+
+        let myCharacter = {
+            accountId: 'guest',
+            name: 'Kaelen',
+            skinColor: '#d99b66',
+            outfitColor: '#92400e',
+            headgear: 'feather',
+            tool: 'spear',
+            houseLevel: 1,
+            toolLevels: { axe: 1, pickaxe: 1, spear: 1 },
+            isOnline: true,
+            sleeping: false,
+            offlineSleeping: false,
+            isSleeping: false,
+            insideHouse: false,
+            x: 32.5,
+            y: 25.5,
+            targetX: null,
+            targetY: null,
+            speed: 5.2,
+            hp: 100,
+            maxHp: 100,
+            hunger: 100,
+            vitality: 100,
+            personalFood: 2,
+            personalWood: 0,
+            personalStone: 0,
+            isDead: false,
+            actionAnim: null,
+            actionTimer: 0,
+            bobPhase: 0,
+            emoteText: '',
+            emoteTimer: 0
+        };
+
+        let camera = { x: 32 * TILE_SIZE, y: 24 * TILE_SIZE, zoom: 0.9 };
+        const MIN_ZOOM = 0.65;
+        const MAX_ZOOM = 1.85;
+        let isPanning = false;
+        let panStart = { x: 0, y: 0, camX: 0, camY: 0 };
+        let isPointerDown = false;
+        let activeTouches = new Map();
+        let lastPinchDist = null;
+        let keys = {};
+        let dpadDir = { x: 0, y: 0 };
+        let activeDpadPointerId = null;
+        let activeDpadMouseDown = false;
+
+        const canvas = document.getElementById('worldCanvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimapCanvas');
+        const mCtx = minimapCanvas.getContext('2d');
+
+        let memoryAccounts = [];
+        let memoryOwnerPin = DEFAULT_OWNER_PIN;
+        let audioCtx = null;
+        let isAudioMuted = false;
+
+        function toggleAudio() {
+            isAudioMuted = !isAudioMuted;
+            const btn = document.getElementById('btnAudio');
+            if (btn) btn.textContent = isAudioMuted ? '🔇' : '🔊';
+        }
+
+        function playTone(freq = 440, type = 'triangle', duration = 0.1, vol = 0.06) {
+            if (isAudioMuted) return;
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return;
+                if (!audioCtx) audioCtx = new AudioContextClass();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function getOwnerPin() {
+            try {
+                return localStorage.getItem('suku_purba_owner_pin_v5') || memoryOwnerPin || DEFAULT_OWNER_PIN;
+            } catch (e) {
+                return memoryOwnerPin || DEFAULT_OWNER_PIN;
+            }
+        }
+
+        function setOwnerPin(newPin) {
+            memoryOwnerPin = newPin;
+            try { localStorage.setItem('suku_purba_owner_pin_v5', newPin); } catch (e) {}
+        }
+
+        function getResourceRespawnMs(type) {
+            if (type === 'tree') return TREE_RESPAWN_MS;
+            if (type === 'rock') return ROCK_RESPAWN_MS;
+            if (type === 'berry') return BERRY_RESPAWN_MS;
+            return 0;
+        }
+
+        function isResourceDepleted(obj, now = Date.now()) {
+            return Boolean(obj && obj.respawnAt && now < obj.respawnAt);
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById('toastBanner');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            clearTimeout(el._t);
+            el._t = setTimeout(() => el.classList.add('hidden'), 2600);
+        }
+
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        }
+
+        function appendSocialFeed(msg) {
+            const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            socialFeedLogs.unshift(`[${t}] ${msg}`);
+            if (socialFeedLogs.length > 12) socialFeedLogs.pop();
+            const box = document.getElementById('socialFeedBox');
+            if (box) box.innerHTML = socialFeedLogs.map(m => `<div>${m}</div>`).join('');
+        }
+
+        function initWildCreatures() {
+            wildCreatures = [];
+            for (let i = 0; i < 16; i++) spawnSingleWildCreature();
+        }
+
+        function spawnSingleWildCreature() {
+            const def = CREATURE_DEFS[Math.floor(Math.random() * CREATURE_DEFS.length)];
+            for (let attempt = 0; attempt < 25; attempt++) {
+                const gx = 4 + Math.floor(Math.random() * (COLS - 8));
+                const gy = 4 + Math.floor(Math.random() * (ROWS - 8));
+                if (Math.hypot(gx - 32, gy - 24) < 7) continue;
+                if (isTileWalkable(gx, gy)) {
+                    wildCreatures.push({
+                        ...def,
+                        x: gx + 0.5,
+                        y: gy + 0.5,
+                        targetX: null,
+                        targetY: null,
+                        waitTimer: 1 + Math.random() * 3,
+                        bobPhase: 0
+                    });
+                    return;
+                }
+            }
+        }
+
+        // Akun & Penyimpanan
+        function getAccountRegistry() {
+            try {
+                const raw = localStorage.getItem('suku_purba_acc_v5');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) {
+                        memoryAccounts = parsed;
+                        return parsed;
+                    }
+                }
+            } catch (e) {}
+            return memoryAccounts;
+        }
+
+        function saveAccountRegistry(list) {
+            memoryAccounts = Array.isArray(list) ? list : [];
+            try { localStorage.setItem('suku_purba_acc_v5', JSON.stringify(memoryAccounts)); } catch (e) {}
+        }
+
+        function persistAccountProgress() {
+            if (!currentAccount) return;
+            const list = getAccountRegistry();
+            const idx = list.findIndex(a => a.id === currentAccount.id);
+            if (idx !== -1) {
+                const isSlp = Boolean(myCharacter.sleeping || myCharacter.insideHouse || myCharacter.isSleeping);
+                list[idx] = {
+                    ...list[idx],
+                    houseLevel: myCharacter.houseLevel,
+                    toolLevels: myCharacter.toolLevels,
+                    personalFood: myCharacter.personalFood,
+                    personalWood: myCharacter.personalWood,
+                    personalStone: myCharacter.personalStone,
+                    hp: myCharacter.hp,
+                    hunger: myCharacter.hunger,
+                    vitality: myCharacter.vitality,
+                    isOnline: myCharacter.isOnline,
+                    sleeping: isSlp,
+                    offlineSleeping: Boolean(myCharacter.offlineSleeping),
+                    isSleeping: isSlp,
+                    insideHouse: isSlp
+                };
+                saveAccountRegistry(list);
+            }
+        }
+
+        function switchAuthTab(tab) {
+            authModeTab = tab;
+            document.getElementById('tabAuthRegister').className = tab === 'register' ? 'px-3 py-1 rounded-lg bg-amber-500 text-stone-950' : 'px-3 py-1 rounded-lg text-stone-300';
+            document.getElementById('tabAuthLogin').className = tab === 'login' ? 'px-3 py-1 rounded-lg bg-amber-500 text-stone-950' : 'px-3 py-1 rounded-lg text-stone-300';
+            document.getElementById('registerEmailWrap').classList.toggle('hidden', tab !== 'register');
+            document.getElementById('authErrorBox').classList.add('hidden');
+        }
+
+        function toggleOwnerPinInput() {
+            const isOwner = document.getElementById('roleOwnerRadio').checked;
+            document.getElementById('authOwnerPin').classList.toggle('hidden', !isOwner);
+        }
+
+        function showAuthError(msg) {
+            const box = document.getElementById('authErrorBox');
+            box.textContent = msg;
+            box.classList.remove('hidden');
+        }
+
+        function renderSavedAccountsQuickList() {
+            const box = document.getElementById('savedAccountsQuickBox');
+            const list = getAccountRegistry();
+            if (!list.length) {
+                box.innerHTML = '<div class="text-[10px] text-stone-500">Belum ada akun tersimpan di perangkat ini.</div>';
+                return;
+            }
+            box.innerHTML = '<div class="text-[10px] font-bold text-stone-400 mb-1">Akun Tersimpan (Klik isi cepat):</div><div class="flex flex-wrap gap-1"></div>';
+            const wrap = box.lastElementChild;
+            list.slice(0, 6).forEach(acc => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'text-[10px] bg-stone-800 hover:bg-stone-700 border border-stone-600 px-2 py-0.5 rounded-lg text-amber-200';
+                b.textContent = `${acc.username}${(acc.offlineSleeping || acc.isSleeping) ? ' 💤' : ''}`;
+                b.onclick = () => {
+                    switchAuthTab('login');
+                    document.getElementById('authUsername').value = acc.username;
+                    document.getElementById('authPassword').value = acc.password;
+                    if (acc.role === 'owner') {
+                        document.getElementById('roleOwnerRadio').checked = true;
+                        toggleOwnerPinInput();
+                        document.getElementById('authOwnerPin').value = getOwnerPin();
+                    } else {
+                        document.getElementById('roleMemberRadio').checked = true;
+                        toggleOwnerPinInput();
+                    }
+                };
+                wrap.appendChild(b);
+            });
+        }
+        function ensurePersonalHouseForAccount(accId, accName, lv = 1, allowAutoCreate = true) {
+            let house = worldData.objects.find(o => o.type === 'hut' && o.ownerAccountId === accId);
+            if (house) {
+                house.ownerName = accName;
+                house.houseLevel = Math.max(house.houseLevel || 1, lv);
+                return house;
+            }
+            if (!allowAutoCreate) return null;
+            for (let rad = 3; rad <= 16; rad++) {
+                for (let dy = -rad; dy <= rad; dy++) {
+                    for (let dx = -rad; dx <= rad; dx++) {
+                        const gx = 32 + dx, gy = 24 + dy;
+                        if (gx < 4 || gx >= COLS - 4 || gy < 4 || gy >= ROWS - 4) continue;
+                        if (Math.abs(gx - 32) <= 1 && Math.abs(gy - 24) <= 1) continue;
+                        if (TERRAIN_INFO[worldData.terrain[gy]?.[gx]]?.walkable && !worldData.objects.some(o => o.x === gx && o.y === gy)) {
+                            house = { x: gx, y: gy, type: 'hut', ownerAccountId: accId, ownerName: accName, houseLevel: lv };
+                            worldData.objects.push(house);
+                            return house;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function findHouseFrontTile(house) {
+            if (!house) return findNearestWalkableSpot(32.5, 25.5) || { x: 32.5, y: 25.5 };
+            const candidates = [
+                { x: house.x + 0.5, y: house.y + 1.15 },
+                { x: house.x + 0.5, y: house.y - 0.35 },
+                { x: house.x + 1.35, y: house.y + 0.5 },
+                { x: house.x - 0.35, y: house.y + 0.5 }
+            ];
+            for (const pt of candidates) {
+                if (canStandAt(pt.x, pt.y)) return pt;
+            }
+            return findNearestWalkableSpot(house.x + 0.5, house.y + 1.0) || { x: 32.5, y: 25.5 };
+        }
+
+        function enterWorld(accRec, myHouse) {
+            isVillageOwner = currentAccount.role === 'owner';
+            myCharacter.accountId = currentAccount.id;
+            myCharacter.name = currentAccount.username;
+            myCharacter.houseLevel = accRec.houseLevel || 1;
+            myCharacter.toolLevels = { axe: 1, pickaxe: 1, spear: 1, ...(accRec.toolLevels || {}) };
+            myCharacter.hp = accRec.hp ?? 100;
+            myCharacter.hunger = accRec.hunger ?? 100;
+            myCharacter.vitality = accRec.vitality ?? 100;
+            myCharacter.personalFood = accRec.personalFood ?? 2;
+            myCharacter.personalWood = accRec.personalWood ?? 0;
+            myCharacter.personalStone = accRec.personalStone ?? 0;
+            myCharacter.isDead = myCharacter.hp <= 0;
+            myCharacter.isOnline = true;
+            // Selalu aktif saat masuk dunia (bukan offlineSleeping)
+            myCharacter.offlineSleeping = false;
+            myCharacter.sleeping = false;
+            myCharacter.isSleeping = false;
+            myCharacter.insideHouse = false;
+            myCharacter.actionAnim = null;
+            myCharacter.actionTimer = 0;
+
+            const front = findHouseFrontTile(myHouse);
+            const safeSpawn = canStandAt(front.x, front.y) ? front : (findNearestWalkableSpot(front.x, front.y) || { x: 32.5, y: 25.5 });
+            myCharacter.x = safeSpawn.x;
+            myCharacter.y = safeSpawn.y;
+            myCharacter.targetX = null;
+            myCharacter.targetY = null;
+
+            keys = {};
+            dpadDir = { x: 0, y: 0 };
+            activeDpadPointerId = null;
+            activeDpadMouseDown = false;
+            isPanning = false;
+            isPointerDown = false;
+            lastTime = performance.now();
+
+            accRec.isOnline = true;
+            accRec.sleeping = false;
+            accRec.offlineSleeping = false;
+            accRec.isSleeping = false;
+            accRec.insideHouse = false;
+            persistAccountProgress();
+
+            document.getElementById('authGateScreen').classList.add('hidden');
+            document.getElementById('deathOverlay').classList.toggle('hidden', !myCharacter.isDead);
+            document.getElementById('ownerToolbar').classList.toggle('hidden', !isVillageOwner);
+            document.getElementById('hudRoleBadge').textContent = isVillageOwner ? '👑 Pemilik (∞)' : '🧭 Warga';
+            document.getElementById('hudPlayerName').textContent = myCharacter.name;
+            document.getElementById('hudWorldTitle').textContent = worldData.title;
+
+            followCameraEnabled = true;
+            updateFollowCameraButton();
+            updateSleepStateUI();
+            resizeCanvas();
+            initOnlineChannel();
+            appendSocialFeed(`🌟 ${myCharacter.name} masuk ke dunia online.`);
+            broadcastPresence();
+            broadcastWorldSync();
+            camera.x = myCharacter.x * TILE_SIZE;
+            camera.y = myCharacter.y * TILE_SIZE;
+            clampCamera();
+            refreshContextualActionUI();
+            playTone(620, 'triangle', 0.14);
+        }
+
+        function handleAuthSubmit() {
+            try {
+                const username = (document.getElementById('authUsername').value || '').trim();
+                const password = (document.getElementById('authPassword').value || '').trim();
+                const email = (document.getElementById('authEmail').value || '').trim();
+                const wantsOwner = document.getElementById('roleOwnerRadio').checked;
+                const ownerPin = (document.getElementById('authOwnerPin').value || '').trim();
+
+                if (username.length < 2) { showAuthError("❌ Nama akun minimal 2 karakter!"); return; }
+                if (password.length < 3) { showAuthError("❌ Kata sandi minimal 3 karakter!"); return; }
+
+                let assignedRole = 'member';
+                if (wantsOwner) {
+                    const activePin = getOwnerPin();
+                    if (ownerPin !== activePin) {
+                        showAuthError(`❌ PIN Pemilik Desa salah! Gunakan PIN ${activePin}.`);
+                        return;
+                    }
+                    assignedRole = 'owner';
+                }
+
+                const accounts = getAccountRegistry();
+                const existing = accounts.find(a => a.username.toLowerCase() === username.toLowerCase());
+
+                if (authModeTab === 'login') {
+                    if (!existing) { showAuthError("❌ Akun belum ada. Silakan pilih 'Buat Akun' terlebih dahulu."); return; }
+                    if (existing.password !== password) { showAuthError("❌ Kata sandi salah!"); return; }
+                    currentAccount = { id: existing.id, username: existing.username, role: wantsOwner ? 'owner' : existing.role };
+                } else {
+                    if (existing) {
+                        if (existing.password !== password) {
+                            showAuthError("❌ Nama akun sudah terdaftar. Gunakan tab 'Masuk' atau pilih nama lain.");
+                            return;
+                        }
+                        currentAccount = { id: existing.id, username: existing.username, role: wantsOwner ? 'owner' : existing.role };
+                    } else {
+                        const newAcc = {
+                            id: 'acc_' + Math.random().toString(36).slice(2, 9),
+                            username, password, email, role: assignedRole,
+                            houseLevel: 1, toolLevels: { axe: 1, pickaxe: 1, spear: 1 },
+                            personalFood: 2, personalWood: 0, personalStone: 0,
+                            hp: 100, hunger: 100, vitality: 100,
+                            isOnline: true, sleeping: false, offlineSleeping: false, isSleeping: false, insideHouse: false
+                        };
+                        accounts.push(newAcc);
+                        saveAccountRegistry(accounts);
+                        currentAccount = { id: newAcc.id, username: newAcc.username, role: newAcc.role };
+                    }
+                }
+
+                const updatedAccounts = getAccountRegistry();
+                const accRec = updatedAccounts.find(a => a.id === currentAccount.id) || {};
+                const myHouse = ensurePersonalHouseForAccount(currentAccount.id, currentAccount.username, accRec.houseLevel || 1, false);
+                enterWorld(accRec, myHouse);
+            } catch (err) {
+<!-- ... existing ... -->
+        function enterInsideMyHouse(reason = 'sleep') {
+            if (!currentAccount) return;
+            const h = ensurePersonalHouseForAccount(currentAccount.id, currentAccount.username, myCharacter.houseLevel, true);
+            const isOff = reason === 'offline';
+<!-- ... existing ... -->
+        function toggleBuildHouseMode() {
+            if (!currentAccount || myCharacter.isDead) return;
+            if (myCharacter.sleeping || myCharacter.insideHouse || myCharacter.isSleeping) {
+                showToast('Bangun dulu dari tidur sebelum membangun rumah!');
+                return;
+            }
+            const existing = worldData.objects.find(o => o.type === 'hut' && o.ownerAccountId === currentAccount.id);
+            if (existing) {
+                buildHouseModeActive = false;
+                updateBuildHouseButtonUI();
+                openHousePanelModal();
+                return;
+            }
+            buildHouseModeActive = !buildHouseModeActive;
+            if (buildHouseModeActive) {
+                panToolActive = false;
+                document.body.classList.remove('pan-mode');
+                if (isVillageOwner) selectOwnerTool('none');
+                showToast(isVillageOwner
+                    ? '👑 Mode Bangun Rumah aktif (Gratis ∞): klik petak kosong di peta!'
+                    : `🏠 Klik petak kosong di peta (Butuh 🪵 ${BUILD_HOUSE_COST.wood} Kayu & 🪨 ${BUILD_HOUSE_COST.stone} Batu)`);
+            }
+            updateBuildHouseButtonUI();
+        }
+
+        function updateBuildHouseButtonUI() {
+            const btn = document.getElementById('btnBuildHouseMode');
+            if (!btn) return;
+            const hasHouse = Boolean(currentAccount && worldData.objects.some(o => o.type === 'hut' && o.ownerAccountId === currentAccount.id));
+            if (hasHouse) {
+                btn.textContent = '🏡 Rumah Saya';
+                btn.className = 'btn-stone bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-400/60 text-emerald-200 text-[10px] font-bold px-2 py-1 rounded-xl';
+            } else if (buildHouseModeActive) {
+                btn.textContent = '✖️ Batal Bangun';
+                btn.className = 'btn-stone bg-amber-500 text-stone-950 border border-amber-200 text-[10px] font-bold px-2 py-1 rounded-xl';
+            } else {
+                btn.textContent = '🏠 Bangun Rumah';
+                btn.className = 'btn-stone bg-amber-950/90 hover:bg-amber-900 border border-amber-400/60 text-amber-200 text-[10px] font-bold px-2 py-1 rounded-xl';
+            }
+        }
+
+        function isValidHouseBuildTile(gx, gy) {
+            if (gx < 2 || gx >= COLS - 2 || gy < 2 || gy >= ROWS - 2) return false;
+            const code = worldData.terrain[gy]?.[gx];
+            if (!code || code === 'W' || !TERRAIN_INFO[code]?.walkable) return false;
+            const hasObj = worldData.objects.some(o => o.x === gx && o.y === gy && !isResourceDepleted(o));
+            if (hasObj) return false;
+            return true;
+        }
+
+        function buildPersonalHouseAt(gx, gy) {
+            if (!currentAccount || myCharacter.isDead) return;
+            const existing = worldData.objects.find(o => o.type === 'hut' && o.ownerAccountId === currentAccount.id);
+            if (existing) {
+                buildHouseModeActive = false;
+                updateBuildHouseButtonUI();
+                openHousePanelModal();
+                return;
+            }
+            if (!isValidHouseBuildTile(gx, gy)) {
+                showToast('❌ Pilih petak daratan kosong (bukan air atau objek terisi)!');
+                return;
+            }
+            if (!isVillageOwner) {
+                if ((myCharacter.personalWood || 0) < BUILD_HOUSE_COST.wood || (myCharacter.personalStone || 0) < BUILD_HOUSE_COST.stone) {
+                    showToast(`❌ Butuh 🪵 ${BUILD_HOUSE_COST.wood} Kayu & 🪨 ${BUILD_HOUSE_COST.stone} Batu untuk membangun rumah!`);
+                    return;
+                }
+                myCharacter.personalWood -= BUILD_HOUSE_COST.wood;
+                myCharacter.personalStone -= BUILD_HOUSE_COST.stone;
+            }
+
+            const newHouse = {
+                x: gx,
+                y: gy,
+                type: 'hut',
+                ownerAccountId: currentAccount.id,
+                ownerName: currentAccount.username,
+                houseLevel: myCharacter.houseLevel || 1
+            };
+            worldData.objects.push(newHouse);
+            myCharacter.actionAnim = 'build';
+            myCharacter.actionTimer = 0.9;
+            buildHouseModeActive = false;
+            updateBuildHouseButtonUI();
+
+            const wx = (gx + 0.5) * TILE_SIZE;
+            const wy = (gy + 0.5) * TILE_SIZE;
+            playTone(640, 'triangle', 0.18);
+            spawnBurstParticles(wx, wy, '#fbbf24', 16);
+            popups.push({ x: wx, y: wy - 26, text: `🏠 Rumah ${currentAccount.username} Terbangun!`, color: '#fde68a', life: 1.6 });
+            appendSocialFeed(`🏠 ${myCharacter.name} membangun rumah pribadi di (${gx}, ${gy})!`);
+
+            persistAccountProgress();
+            refreshContextualActionUI();
+            broadcastPresence();
+            broadcastWorldSync();
+        }
+
+        function triggerContextualAction() {
+<!-- ... existing ... -->
+            } else if (t.action === 'warm') {
+                myCharacter.vitality = Math.min(100, myCharacter.vitality + 15);
+                playTone(320, 'sine', 0.14);
+                popups.push({ x: px, y: py - 24, text: '🔥 +15 Vitalitas', color: '#fdba74', life: 1.2 });
+            } else if (t.action === 'build_house') {
+                const gx = Math.max(2, Math.min(COLS - 3, Math.floor(myCharacter.x)));
+                const gy = Math.max(2, Math.min(ROWS - 3, Math.floor(myCharacter.y)));
+                buildPersonalHouseAt(gx, gy);
+                return;
+            }
+
+            persistAccountProgress();
+<!-- ... existing ... -->
+                if (currentAccount && !mySleeping) {
+                    renderables.push({ sy: myCharacter.y, kind: 'me', data: myCharacter });
+                }
+
+                if (currentAccount && buildHouseModeActive && hoveredGridTile.x >= 0 && hoveredGridTile.y >= 0) {
+                    const canBuild = isValidHouseBuildTile(hoveredGridTile.x, hoveredGridTile.y) &&
+                        (isVillageOwner || ((myCharacter.personalWood || 0) >= BUILD_HOUSE_COST.wood && (myCharacter.personalStone || 0) >= BUILD_HOUSE_COST.stone));
+                    const hx = hoveredGridTile.x * TILE_SIZE;
+                    const hy = hoveredGridTile.y * TILE_SIZE;
+                    ctx.fillStyle = canBuild ? 'rgba(52, 211, 153, 0.28)' : 'rgba(244, 63, 94, 0.28)';
+                    ctx.fillRect(hx + 2, hy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.strokeStyle = canBuild ? '#34d399' : '#fb7185';
+                    ctx.lineWidth = 2.5;
+                    ctx.strokeRect(hx + 2, hy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.font = '24px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.globalAlpha = 0.85;
+                    ctx.fillText('🛖', hx + TILE_SIZE / 2, hy + TILE_SIZE / 2);
+                    ctx.globalAlpha = 1;
+                }
+
+                renderables.sort((a, b) => a.sy - b.sy);
+<!-- ... existing ... -->
+            if (myCharacter.sleeping || myCharacter.insideHouse || myCharacter.isSleeping) return;
+            const rect = canvas.getBoundingClientRect();
+            const wx = (e.clientX - rect.left - canvas.width / 2) / camera.zoom + camera.x;
+            const wy = (e.clientY - rect.top - canvas.height / 2) / camera.zoom + camera.y;
+            const gx = Math.floor(wx / TILE_SIZE);
+            const gy = Math.floor(wy / TILE_SIZE);
+            hoveredGridTile = { x: gx, y: gy };
+
+            if (buildHouseModeActive) {
+                if (e.pointerType !== 'touch') buildPersonalHouseAt(gx, gy);
+                return;
+            }
+
+            if (isVillageOwner && ownerTool !== 'none') {
+<!-- ... existing ... -->
+        canvas.addEventListener('pointermove', e => {
+            if (currentAccount) {
+                const rect = canvas.getBoundingClientRect();
+                const wx = (e.clientX - rect.left - canvas.width / 2) / camera.zoom + camera.x;
+                const wy = (e.clientY - rect.top - canvas.height / 2) / camera.zoom + camera.y;
+                hoveredGridTile = { x: Math.floor(wx / TILE_SIZE), y: Math.floor(wy / TILE_SIZE) };
+            }
+            if (activeTouches.has(e.pointerId)) {
+<!-- ... existing ... -->
+        window.addEventListener('pointerup', e => {
+            if (e && e.pointerId !== undefined) {
+                const touchInfo = activeTouches.get(e.pointerId);
+                if (touchInfo && e.pointerType === 'touch' && !isPanning && activeTouches.size === 1 && currentAccount && !myCharacter.isDead && !(myCharacter.sleeping || myCharacter.insideHouse || myCharacter.isSleeping)) {
+                    const movedDist = Math.hypot(e.clientX - touchInfo.startX, e.clientY - touchInfo.startY);
+                    if (movedDist < 18) {
+                        const rect = canvas.getBoundingClientRect();
+                        const wx = (e.clientX - rect.left - canvas.width / 2) / camera.zoom + camera.x;
+                        const wy = (e.clientY - rect.top - canvas.height / 2) / camera.zoom + camera.y;
+                        const gx = Math.floor(wx / TILE_SIZE);
+                        const gy = Math.floor(wy / TILE_SIZE);
+                        if (buildHouseModeActive) {
+                            buildPersonalHouseAt(gx, gy);
+                        } else if (!isVillageOwner || ownerTool === 'none') {
+                            const spot = findNearestWalkableSpot(wx / TILE_SIZE, wy / TILE_SIZE);
+                            if (spot) {
+                                myCharacter.targetX = spot.x;
+                                myCharacter.targetY = spot.y;
+                            }
+                        }
+                    }
+                }
+                activeTouches.delete(e.pointerId);
+            }
+<!-- ... existing ... -->
+```
